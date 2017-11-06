@@ -1,0 +1,13 @@
+td {
+  height: 50px;
+  width: 50px;
+  border: 1px solid black;
+}
+
+.selecting {
+  background-color: yellow;
+}
+
+.none {
+  background-color: blue;
+}
