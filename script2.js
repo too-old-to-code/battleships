@@ -16,10 +16,27 @@
 
     this.view.onmouseover = function(e){
       var id = e.target.dataset.id
-      var group = Math.floor(id/this.width) * this.width
-      console.log(group);
+      var groupStart = Math.floor(id/+this.width) * +this.width
+      var groupEnd = +groupStart + +this.width
+      var group = []
+      for (var i = groupStart; i < groupEnd; i ++){
+        group.push(i)
+      }
+
+
+      var pos = [group.indexOf(+id), this.size - 1, this.width - this.size].sort()
+      var ids = []
+      var startPoint = Math.min(Math.max(+id - (Math.floor(+this.size/2)), groupStart), groupEnd - +this.size)
+      var endPoint = startPoint + +this.size
+      var allIndexes = []
+      for (var i = startPoint; i < endPoint; i ++ ){
+        allIndexes.push(i)
+      }
+
       if (id != null){
-        this.model[id] = 1;
+        allIndexes.forEach(function(idx){
+          this.model[idx] += 1;
+        }.bind(this))
       }
       this.refresh()
     }.bind(this)
@@ -27,7 +44,20 @@
     this.view.onmouseout = function(e){
       var id = e.target.dataset.id
       if (id != null){
-        this.model[id] = 0;
+        this.model = this.model.map(function(num){
+          return ~[1,3].indexOf(num) ? num -= 1 : num
+        })
+      }
+    }.bind(this)
+
+    this.view.onclick = function(e){
+      var id = e.target.dataset.id
+      if (~this.model.indexOf(3)){
+        console.log('cant')
+      } else if (id != null){
+        this.model = this.model.map(function(num){
+          return num === 1 ? 2 : num
+        })
       }
     }.bind(this)
 
@@ -64,7 +94,8 @@
 
   Board.prototype.createModel = function(numOfElements){
     var boardModel = new Array(numOfElements);
-    return boardModel.fill(0);
+    boardModel.fill(0);
+    return boardModel
   }
 
   function Game(width, height){
