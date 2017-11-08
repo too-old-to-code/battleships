@@ -1,67 +1,54 @@
 (function(){
+  var VERTICAL = 'vertical'
+  var HORIZONTAL = 'horizontal'
   var game;
   var width = document.getElementById('width');
   var height = document.getElementById('height');
   var dimensionsBtn = document.getElementById('dimensionsBtn');
 
-
   function Board(width, height){
-    this.width = width;
-    this.height = height;
-    this.size = 3
+    this.orientation = HORIZONTAL
+    this.width = Number(width);
+    this.height = Number(height);
+    this.size = 4
     this.states = ['empty','selecting','selected','preselected']
     this.view = document.getElementById('board')
     this.view.append(this.createTable(height, width))
     this.model = this.createModel(width * height)
+    this.gridsToHighlight = []
 
-    this.view.onmouseover = function(e){
-      var id = e.target.dataset.id
-      var groupStart = Math.floor(id/+this.width) * +this.width
-      var groupEnd = +groupStart + +this.width
-      var group = []
-      for (var i = groupStart; i < groupEnd; i ++){
-        group.push(i)
-      }
+    this.view.onmouseover = this.highlightControl.bind(this)
+    this.view.onmouseout = this.unhighlightControl.bind(this)
+    this.view.onclick = this.placeShip.bind(this)
+  }
 
+  Board.prototype.highlightControl = function(e){
+    this.id = e ? Number(e.target.dataset.id) : this.id
+    this.getStartAndEndPoints(this.id)
+    this.determineGridsToHighlight()
+    this.highlightGrids(this.id)
+  }
 
-      var pos = [group.indexOf(+id), this.size - 1, this.width - this.size].sort()
-      var ids = []
-      var startPoint = Math.min(Math.max(+id - (Math.floor(+this.size/2)), groupStart), groupEnd - +this.size)
-      var endPoint = startPoint + +this.size
-      var allIndexes = []
-      for (var i = startPoint; i < endPoint; i ++ ){
-        allIndexes.push(i)
-      }
+  Board.prototype.unhighlightControl = function(){
+    this.gridsToHighlight = []
+    this.model = this.model.map( num => [1,3].includes(num) ? num -= 1 : num )
+  }
 
-      if (id != null){
-        allIndexes.forEach(function(idx){
-          this.model[idx] += 1;
-        }.bind(this))
-      }
-      this.refresh()
-    }.bind(this)
+  Board.prototype.positionIsVacant = function(){
+    return !this.model.includes(3)
+  }
 
-    this.view.onmouseout = function(e){
-      var id = e.target.dataset.id
-      if (id != null){
-        this.model = this.model.map(function(num){
-          return ~[1,3].indexOf(num) ? num -= 1 : num
-        })
-      }
-    }.bind(this)
+  Board.prototype.placeShip = function(){
+    if (this.positionIsVacant()){
+      this.model = this.model.map(num => num === 1 ? 2 : num )
+    }
+  }
 
-    this.view.onclick = function(e){
-      var id = e.target.dataset.id
-      if (~this.model.indexOf(3)){
-        console.log('cant')
-      } else if (id != null){
-        this.model = this.model.map(function(num){
-          return num === 1 ? 2 : num
-        })
-      }
-    }.bind(this)
-
-
+  Board.prototype.determineGridsToHighlight = function(){
+    var distanceToNextHiglightedGrid = this.orientation === HORIZONTAL ? 1 : this.width;
+    for (var i = this.startPoint; i < this.endPoint; i += distanceToNextHiglightedGrid){
+      this.gridsToHighlight.push(i)
+    }
   }
 
   Board.prototype.createTable = function(rows, columns){
@@ -70,6 +57,34 @@
       tbody.append(this.createRow(columns, i * columns))
     }
     return tbody
+  }
+
+  Board.prototype.getStartAndEndPoints = function(id){
+    var minPointOnAxis, maxPointOnAxis;
+    if ( this.orientation === HORIZONTAL ){
+      minPointOnAxis = Math.floor(id/this.width) * this.width
+      maxPointOnAxis = minPointOnAxis + this.width
+      this.startPoint = Math.min(Math.max(id - (Math.floor(this.size/2)), minPointOnAxis), maxPointOnAxis - this.size)
+      this.endPoint = this.startPoint + this.size
+    } else {
+      minPointOnAxis = id % this.width
+      maxPointOnAxis = minPointOnAxis + this.width * this.height
+      this.startPoint = Math.min( Math.max(minPointOnAxis, id - ( Math.floor(this.size/2) * this.width)), maxPointOnAxis - (this.size * this.width))
+      this.endPoint = this.startPoint + (this.size * this.width)
+    }
+  }
+
+  Board.prototype.highlightGrids = function(id){
+    if (id != null){
+      this.gridsToHighlight.forEach( idx => this.model[idx] += 1);
+      this.refresh()
+    }
+  }
+
+  Board.prototype.changeOrientation = function(){
+    this.orientation = this.orientation === HORIZONTAL ? VERTICAL : HORIZONTAL
+    this.unhighlightControl()
+    this.highlightControl()
   }
 
   Board.prototype.createRow = function(columns, colIndex){
@@ -102,7 +117,11 @@
     this.width = width
     this.height = height
     var board = new Board(width, height)
-    console.log(board);
+    document.onkeydown = function(e){
+      if (e.code === 'Space'){
+        board.changeOrientation()
+      }
+    }
   }
 
   dimensionsBtn.onclick = function(){
