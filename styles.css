@@ -1,11 +1,21 @@
 table {
   border-collapse: collapse;
+  width: 80%;
+  height: 80%;
 }
 
 td {
-  height: 50px;
-  width: 50px;
-  border: 1px solid black;
+/*  height: 50px;
+  width: 50px;*/
+  border: 2px solid yellow;
+  background-color: blue;
+}
+
+.container {
+  width: 100vw;
+  height: 100vh;
+  max-height: 100vw;
+  max-width: 100vh;
 }
 
 .selecting {
