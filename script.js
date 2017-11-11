@@ -1,102 +1,199 @@
 (function(){
-  var boardArray;
+  const getElmnt = (id) => document.getElementById(id)
+  const makeElmnt = (type) => document.createElement(type)
 
-  function determineCellsToHighlight(){
-    return boardArray.reduce(function(acc, num, i){
-      if (num == 2){
-        acc.push(i)
-      }
-      return acc
-    }, [])
-  }
+  const p1Board = getElmnt('board');
+  const p2Board = getElmnt('opponent-board');
+  const width = getElmnt('width');
+  const height = getElmnt('height');
+  const dimensionsBtn = getElmnt('dimensionsBtn');
+  const startGame = getElmnt('start-game');
 
+  const setBoard = (board, ships, cb) => {
+    const EMPTY = 0;
+    const SELECTING = 1;
+    const SELECTED = 2;
+    const PRESELECTED = 3;
+    // const STATE_CLASSES = [
+    //   'empty',
+    //   'selecting',
+    //   'selected',
+    //   'preselected'
+    // ]
+    let horizontalOrientation = true;
+    let gridsToHighlight = [];
+    let id = null;
+    let startPoint = null;
+    let endPoint = null;
+    let size = ships.shift()
 
-  function refreshScreen(board){
-    var index = boardArray.indexOf(2)
-    console.log(determineCellsToHighlight(boardArray));
-
-
-    var elementsWithHighlight = document.getElementsByClassName('highlight');
-    [].map.call(elementsWithHighlight, function(el){
-      el.classList.remove('highlight')
-    })
-    var element = board.querySelector('[data-id="' + index + '"]')
-    element.classList.add('highlight')
-  }
-
-  function beginPlacement(board){
-    board.onmouseover = function(evt){
-      if (evt.target.dataset.id != null){
-        boardArray[evt.target.dataset.id] = 2
-        boardArray[evt.target.dataset.id + 1] = 2
-        boardArray[evt.target.dataset.id - 1] = 2
-        refreshScreen(board)
-      }
-    }
-
-    board.onmouseout = function(evt){
-      if (evt.target.dataset.id != null){
-
-        boardArray[evt.target.dataset.id] = 1
+    const determineGridsToHighlight = () => {
+      const distanceToNextHiglightedGrid = horizontalOrientation ? 1 : board.width;
+      for (let i = startPoint; i < endPoint; i += distanceToNextHiglightedGrid){
+        gridsToHighlight.push(i)
       }
     }
-  }
 
+    // const refresh = () => {
+    //   board.model.forEach((state, index) => {
+    //     board.view.querySelector('[data-id="' + index + '"]').className = STATE_CLASSES[state]
+    //   })
+    // }
 
-  function getElements(identifiers){
-    var el = {}
-    identifiers.forEach(function(name){
-      el[name] = document.getElementById(name)
-    })
-    return el
-  }
-
-  function createCell(index){
-    var td = document.createElement('td')
-    td.setAttribute('data-id', index)
-    return td
-  }
-
-  function createRow(columns, colIndex){
-    var tr = document.createElement('tr')
-    for (var i = 0; i < columns; i ++){
-      tr.append(createCell(colIndex + i))
+    const highlightGrids = (id) => {
+      if (id != null){
+        gridsToHighlight.forEach( idx => board.model[idx] += 1);
+        board.refresh()
+      }
     }
-    return tr
-  }
 
-  function createTable(rows, columns){
-    var tbody = document.createElement('tbody')
-    for (var i = 0; i < rows; i ++){
-      tbody.append(createRow(columns, i * columns))
+    const unhighlightControl = () => {
+      gridsToHighlight = []
+      board.model = board.model.map( status => [ SELECTING, PRESELECTED ].includes(status) ? status -= 1 : status )
     }
-    return tbody
+
+    const changeOrientation = () => {
+      horizontalOrientation = !horizontalOrientation
+      unhighlightControl()
+      highlightControl()
+    }
+
+    document.onkeydown = (event) => {
+      if (event.code !== 'Space') return;
+      changeOrientation();
+    }
+
+    const highlightControl = (event) => {
+      id = event ? Number(event.target.dataset.id) : id
+      getStartAndEndPoints(id)
+      determineGridsToHighlight()
+      highlightGrids(id)
+    }
+
+    const getStartAndEndPoints = (id) => {
+      const { width, height } = board
+      let minPointOnAxis, maxPointOnAxis;
+      if ( horizontalOrientation ){
+        minPointOnAxis = Math.floor(id/width) * width
+        maxPointOnAxis = minPointOnAxis + width
+        startPoint = Math.min(Math.max(id - (Math.floor(size/2)), minPointOnAxis), maxPointOnAxis - size)
+        endPoint = startPoint + size
+      } else {
+        minPointOnAxis = id % width
+        maxPointOnAxis = minPointOnAxis + width * height
+        startPoint = Math.min( Math.max(minPointOnAxis, id - ( Math.floor( size/2 ) * width)), maxPointOnAxis - (size * width))
+        endPoint = startPoint + (size * width)
+      }
+    }
+
+    const positionIsVacant = () => !board.model.includes(3)
+
+    const placeShip = (event) => {
+      if (positionIsVacant() && event.target.dataset.id != null){
+        board.model = board.model.map( status => status === SELECTING ? PRESELECTED : status )
+        size = ships.shift()
+        board.refresh()
+        if (!size){
+          board.model = board.model.map( status => status === PRESELECTED ? SELECTED : status)
+          board.view.onclick = null
+          board.refresh()
+          cb(board.model)
+        }
+      }
+    }
+
+    board.view.onmouseover = highlightControl
+    board.view.onmouseout = unhighlightControl
+    board.view.onclick = placeShip
   }
 
-  var elementNames =  [
-    'width',
-    'height',
-    'board',
-    'dimensionsBtn'
-  ]
+  class Board {
+    constructor({ width, height, element, gridClasses}){
+      this.gridClasses = gridClasses;
+      this.width = width = Number(width);
+      this.height = height = Number(height);
+      this.view = element
+      this.view.append(this.createTable(width, height))
+      this.model = this.createModel(width * height);
+    }
 
+    createTable(columns, rows){
+      const tbody = document.createElement('tbody')
+      for (let i = 0; i < rows; i ++){
+        tbody.append(this.createRow(columns, i * columns))
+      }
+      return tbody
+    }
 
-  function createBoardArray(numOfElements){
-    boardArray = new Array(numOfElements)
-    boardArray.fill(1)
+    createRow(columns, colIndex){
+      const tr = makeElmnt('tr')
+      for (let i = 0; i < columns; i ++){
+        tr.append(this.createCell(colIndex + i))
+      }
+      return tr
+    }
+
+    createCell(index){
+      const td = makeElmnt('td')
+      td.setAttribute('data-id', index)
+      return td
+    }
+
+    createModel(numOfElements){
+      const boardModel = new Array(numOfElements);
+      boardModel.fill(0);
+      return boardModel
+    }
+    refresh(){
+      this.model.forEach((state, index) => {
+        this.view.querySelector('[data-id="' + index + '"]').className = this.gridClasses[state]
+      })
+    }
   }
 
-  var el = getElements(elementNames)
-
-  el.dimensionsBtn.onclick = function(){
-    var width = el.width.value;
-    var height = el.height.value;
-    var tbody = createTable(height, width);
-    console.log(height * width);
-    createBoardArray(height * width)
-    board.append(tbody)
-    beginPlacement(board)
+  const tryToHit = (board) => {
+    const EMPTY = 0;
+    const MISS = 1;
+    const HIT = 2;
+    const SHIP = 3;
+    board.view.onclick = function(event){
+      const id = event.target.dataset.id
+      if ( board.model[id] === SHIP ){
+        board.model[id] = HIT
+      }else if (board.model[id] === EMPTY){
+        board.model[id] = MISS
+      }
+      board.refresh()
+    }
   }
 
+  const next = (otherModel) => {
+    const GRID_OPTIONS = {
+      width: width.value,
+      height: height.value,
+      element: p2Board,
+      gridClasses: [ '', 'miss', 'hit']
+    }
+
+    const opponentBoard = new Board(GRID_OPTIONS)
+    opponentBoard.model = otherModel
+    opponentBoard.view.style.display = "table"
+    tryToHit(opponentBoard)
+  }
+
+
+  const beginGame = () => {
+    const GRID_OPTIONS = {
+      width: width.value,
+      height: height.value,
+      element: p1Board,
+      gridClasses: [ '', 'selecting', 'selected', 'preselected']
+    }
+    startGame.style.display = 'none'
+    const gameBoard = new Board(GRID_OPTIONS);
+    setBoard(gameBoard, [ 5, 4, 4, 3, 3, 2, 2 ], next)
+  }
+
+  dimensionsBtn.onclick = beginGame
 
 })()
