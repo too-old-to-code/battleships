@@ -14,14 +14,9 @@
     const SELECTING = 1;
     const SELECTED = 2;
     const PRESELECTED = 3;
-    // const STATE_CLASSES = [
-    //   'empty',
-    //   'selecting',
-    //   'selected',
-    //   'preselected'
-    // ]
     let horizontalOrientation = true;
     let gridsToHighlight = [];
+    let shipLocations = [];
     let id = null;
     let startPoint = null;
     let endPoint = null;
@@ -34,16 +29,10 @@
       }
     }
 
-    // const refresh = () => {
-    //   board.model.forEach((state, index) => {
-    //     board.view.querySelector('[data-id="' + index + '"]').className = STATE_CLASSES[state]
-    //   })
-    // }
-
     const highlightGrids = (id) => {
       if (id != null){
         gridsToHighlight.forEach( idx => board.model[idx] += 1);
-        board.refresh()
+        board.renderView()
       }
     }
 
@@ -91,12 +80,13 @@
     const placeShip = (event) => {
       if (positionIsVacant() && event.target.dataset.id != null){
         board.model = board.model.map( status => status === SELECTING ? PRESELECTED : status )
+        shipLocations.push(gridsToHighlight);
         size = ships.shift()
-        board.refresh()
+        board.renderView()
         if (!size){
           board.model = board.model.map( status => status === PRESELECTED ? SELECTED : status)
           board.view.onclick = null
-          board.refresh()
+          board.renderView()
           cb(board.model)
         }
       }
@@ -115,6 +105,10 @@
       this.view = element
       this.view.append(this.createTable(width, height))
       this.model = this.createModel(width * height);
+    }
+
+    contains(item){
+      return this.model.includes(item)
     }
 
     createTable(columns, rows){
@@ -140,11 +134,11 @@
     }
 
     createModel(numOfElements){
-      const boardModel = new Array(numOfElements);
+      const boardModel = new Int8Array(numOfElements);
       boardModel.fill(0);
       return boardModel
     }
-    refresh(){
+    renderView(){
       this.model.forEach((state, index) => {
         this.view.querySelector('[data-id="' + index + '"]').className = this.gridClasses[state]
       })
@@ -154,8 +148,8 @@
   const tryToHit = (board) => {
     const EMPTY = 0;
     const MISS = 1;
-    const HIT = 2;
-    const SHIP = 3;
+    const SHIP = 2;
+    const HIT = 3;
     board.view.onclick = function(event){
       const id = event.target.dataset.id
       if ( board.model[id] === SHIP ){
@@ -163,7 +157,10 @@
       }else if (board.model[id] === EMPTY){
         board.model[id] = MISS
       }
-      board.refresh()
+      board.renderView()
+      if (!board.contains(SHIP)){
+        console.log('All over')
+      }
     }
   }
 
@@ -172,7 +169,7 @@
       width: width.value,
       height: height.value,
       element: p2Board,
-      gridClasses: [ '', 'miss', 'hit']
+      gridClasses: [ '', 'miss', '','hit']
     }
 
     const opponentBoard = new Board(GRID_OPTIONS)
@@ -180,7 +177,6 @@
     opponentBoard.view.style.display = "table"
     tryToHit(opponentBoard)
   }
-
 
   const beginGame = () => {
     const GRID_OPTIONS = {
@@ -191,7 +187,7 @@
     }
     startGame.style.display = 'none'
     const gameBoard = new Board(GRID_OPTIONS);
-    setBoard(gameBoard, [ 5, 4, 4, 3, 3, 2, 2 ], next)
+    setBoard(gameBoard, [ 5, 4, 3, 2 ], next)
   }
 
   dimensionsBtn.onclick = beginGame

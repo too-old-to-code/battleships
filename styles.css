@@ -137,4 +137,12 @@ button:hover {
   cursor: pointer;
 }
 
+.miss {
+  background-color: blue;
+}
+
+.hit {
+  background-color: red;
+}
+
 
