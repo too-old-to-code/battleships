@@ -70,6 +70,9 @@ td {
 }
 
 .form {
+  backface-visibility: hidden;
+  transition: transform 2s;
+  position: relative;
   user-select: none;
   border:1px solid black;
   border-radius: 5px;
@@ -81,7 +84,6 @@ td {
   flex-direction: column;
   background-color: var(--secondary-color);
   text-shadow: 1px 1px 1px black;
-
 }
 
 .form label {
@@ -143,6 +145,24 @@ button:hover {
 
 .hit {
   background-color: red;
+}
+
+button#btn-spin {
+  background-color: var(--tertiary-color);
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  justify-content: center;
+  line-height: 27px;
+  letter-spacing: 0px;
+}
+
+.form.reverse {
+  transform: rotateY(180deg);
 }
 
 

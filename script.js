@@ -19,8 +19,10 @@
   const p2Board = getElmnt('opponent-board');
   const width = getElmnt('width');
   const height = getElmnt('height');
-  const dimensionsBtn = getElmnt('dimensionsBtn');
+  const dimensionsBtn = getElmnt('btn-dimensions');
   const startGame = getElmnt('start-game');
+  const spinBtn = getElmnt('btn-spin')
+  const form = document.getElementsByClassName('form')[0]
 
   const saveGridToFirebase = (board, shipLocations, player) => {
     console.log('Saving to firebase');
@@ -220,6 +222,12 @@
     setBoard(gameBoard, [ 5, 4, 3, 2 ], next)
   }
 
+  const spinPanel = () => {
+    form.classList.add('reverse')
+    console.log('hello')
+  }
+
   dimensionsBtn.onclick = beginGame
+  spinBtn.onclick = spinPanel
 
 })()
