@@ -1,4 +1,17 @@
 (function(){
+  var config = {
+    apiKey: "AIzaSyBGi1VZkmiFMH8pk4Pam__8TB19EFpBVvo",
+    authDomain: "battleships-c7e53.firebaseapp.com",
+    databaseURL: "https://battleships-c7e53.firebaseio.com",
+    projectId: "battleships-c7e53",
+    messagingSenderId: "380665178914"
+  };
+
+  const fb = firebase.initializeApp(config);
+  var defaultDatabase = firebase.database();
+  const date = new Date()
+  const num = date.getTime()
+
   const getElmnt = (id) => document.getElementById(id)
   const makeElmnt = (type) => document.createElement(type)
 
@@ -8,6 +21,18 @@
   const height = getElmnt('height');
   const dimensionsBtn = getElmnt('dimensionsBtn');
   const startGame = getElmnt('start-game');
+
+  const saveGridToFirebase = (board, shipLocations, player) => {
+    console.log('Saving to firebase');
+    defaultDatabase.ref(`/battleships/${num}`).set({
+      [player]: {
+        model: board.model,
+        ships: shipLocations
+      },
+      width: board.width,
+      height: board.height
+    });
+  }
 
   const setBoard = (board, ships, cb) => {
     const EMPTY = 0;
@@ -87,6 +112,7 @@
           board.model = board.model.map( status => status === PRESELECTED ? SELECTED : status)
           board.view.onclick = null
           board.renderView()
+          saveGridToFirebase(board, shipLocations, 'PLAYER_1')
           cb(board.model)
         }
       }
@@ -178,6 +204,8 @@
     tryToHit(opponentBoard)
   }
 
+
+
   const beginGame = () => {
     const GRID_OPTIONS = {
       width: width.value,
@@ -187,6 +215,8 @@
     }
     startGame.style.display = 'none'
     const gameBoard = new Board(GRID_OPTIONS);
+
+
     setBoard(gameBoard, [ 5, 4, 3, 2 ], next)
   }
 
