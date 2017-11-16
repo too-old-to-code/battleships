@@ -7,10 +7,20 @@
     messagingSenderId: "380665178914"
   };
 
+  const uuidv4= () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+
+  console.log(uuidv4());
+
   const fb = firebase.initializeApp(config);
   var defaultDatabase = firebase.database();
+  var ref = defaultDatabase.ref('/pending')
+
   const date = new Date()
-  const num = date.getTime()
+  // const num = date.getTime()
+  let uuid
 
   const getElmnt = (id) => document.getElementById(id)
   const makeElmnt = (type) => document.createElement(type)
@@ -26,9 +36,34 @@
   const spinBtns = document.getElementsByClassName('btn-spin')
   const form = document.getElementsByClassName('form')[0]
 
+
+  ref.on('value', function(snapshot){
+    const fragment = document.createDocumentFragment();
+    const obj = snapshot.val()
+    if (obj){
+      const keys = Object.keys(obj)
+      keys.forEach( key => {
+        const option = document.createElement('option')
+        option.value = key
+        option.textContent = obj[key].height + ' x ' + obj[key].width
+        fragment.appendChild(option)
+      })
+      gameSelect.innerHTML = ''
+      gameSelect.appendChild(fragment)
+    }
+  })
+
+  const saveUserToPending = (width, height, player) => {
+    uuid = uuidv4()
+    defaultDatabase.ref(`/pending/${uuid}`).set({
+      width: width,
+      height: height
+    });
+  }
+
   const saveGridToFirebase = (board, shipLocations, player) => {
     console.log('Saving to firebase');
-    defaultDatabase.ref(`/battleships/${num}`).set({
+    defaultDatabase.ref(`/playing/${num}`).set({
       [player]: {
         model: board.model,
         ships: shipLocations
@@ -217,9 +252,11 @@
     }
     startGame.style.display = 'none'
     const gameBoard = new Board(GRID_OPTIONS);
-
-
     setBoard(gameBoard, [ 5, 4, 3, 2 ], next)
+  }
+
+  const offerGame = () => {
+    saveUserToPending(width.value, height.value, 'Player1')
   }
 
   const spinPanel = (function(){
@@ -229,8 +266,7 @@
     }
   })()
 
-  dimensionsBtn.onclick = beginGame;
-  // spinBtn.onclick = spinPanel
+  dimensionsBtn.onclick = offerGame;
   [].forEach.call(spinBtns, (btn) => btn.onclick = spinPanel)
 
 })()
