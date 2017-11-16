@@ -21,7 +21,8 @@
   const height = getElmnt('height');
   const dimensionsBtn = getElmnt('btn-dimensions');
   const startGame = getElmnt('start-game');
-  const spinBtn = getElmnt('btn-spin')
+  // const spinBtn = getElmnt('btn-spin')
+  const spinBtns = document.getElementsByClassName('btn-spin')
   const form = document.getElementsByClassName('form')[0]
 
   const saveGridToFirebase = (board, shipLocations, player) => {
@@ -206,8 +207,6 @@
     tryToHit(opponentBoard)
   }
 
-
-
   const beginGame = () => {
     const GRID_OPTIONS = {
       width: width.value,
@@ -222,12 +221,15 @@
     setBoard(gameBoard, [ 5, 4, 3, 2 ], next)
   }
 
-  const spinPanel = () => {
-    form.classList.add('reverse')
-    console.log('hello')
-  }
+  const spinPanel = (function(){
+    let panelRotation = 0;
+    return () => {
+      form.style.transform = `rotateY(${panelRotation += 180}deg)`
+    }
+  })()
 
-  dimensionsBtn.onclick = beginGame
-  spinBtn.onclick = spinPanel
+  dimensionsBtn.onclick = beginGame;
+  // spinBtn.onclick = spinPanel
+  [].forEach.call(spinBtns, (btn) => btn.onclick = spinPanel)
 
 })()
