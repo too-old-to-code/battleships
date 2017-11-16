@@ -19,8 +19,9 @@
   const p2Board = getElmnt('opponent-board');
   const width = getElmnt('width');
   const height = getElmnt('height');
-  const dimensionsBtn = getElmnt('btn-dimensions');
+  const dimensionsBtn = getElmnt('btn-create-game');
   const startGame = getElmnt('start-game');
+  const gameSelect = getElmnt('game-select')
   // const spinBtn = getElmnt('btn-spin')
   const spinBtns = document.getElementsByClassName('btn-spin')
   const form = document.getElementsByClassName('form')[0]

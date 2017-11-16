@@ -4,6 +4,7 @@
   --tertiary-color: darkgray;
   --positiive-text-color: grey;
   --negative-text-color: white;
+  --radius-gentle: 5px;
 }
 
 html, body {
@@ -33,6 +34,13 @@ td {
 
 #board {
   align-self: center;
+}
+
+#game-select {
+  width: 202px;
+  border-radius: var(--radius-gentle);
+  padding: 3px 0;
+  font-size: 1.1em
 }
 
 .game-container {
@@ -67,7 +75,7 @@ td {
   display: flex;
   align-items: center;
   justify-content: center;
-   perspective: 1800px;
+   perspective: 2800px;
   perspective-origin: 0% 50%;
 }
 
@@ -76,7 +84,7 @@ td {
   position: absolute;
   user-select: none;
   border:1px solid black;
-  border-radius: 5px;
+  border-radius: var(--radius-gentle);
   width: 300px;
   transform-style: preserve-3d;
   height: 200px;
@@ -85,7 +93,7 @@ td {
 
 .form label {
   display: flex;
-  border-radius: 5px;
+  border-radius: var(--radius-gentle);
   border: solid 1px grey;
   width: 200px;
 }
@@ -94,8 +102,8 @@ td {
   flex: 1;
   height: 30px;
   border: none;
-  border-top-right-radius: 5px;
-  border-bottom-right-radius: 5px;
+  border-top-right-radius: var(--radius-gentle);
+  border-bottom-right-radius: var(--radius-gentle);
   border-left: 1px solid grey;
   width: 20px;
   font-size: 1.3em;
@@ -121,7 +129,7 @@ td {
   width: 202px;
   height: 32px;
   border: 1px solid grey;
-  border-radius: 5px;
+  border-radius: var(--radius-gentle);
   background-color: var(--tertiary-color);
   color: var(--negative-text-color);
   font-family: sans-serif;
@@ -161,13 +169,13 @@ button.btn-spin:focus {
   outline: none;
 }
 
-.side-a {
-  border-radius: 5px;
+.side-a, .side-b {
+  border-radius: var(--radius-gentle);
   background-color: var(--secondary-color);
-  z-index: 0;
   display: flex;
   align-items: center;
   justify-content: space-evenly;
+  backface-visibility: hidden;
   flex-direction: column;
   position: absolute;
   width: 100%;
@@ -175,18 +183,7 @@ button.btn-spin:focus {
 }
 
 .side-b {
-  z-index: 0;
-  border-radius: 5px;
-  backface-visibility: hidden;
-  background-color: var(--secondary-color);
-  display: flex;
   transform: rotateY(180deg);
-  align-items: center;
-  justify-content: space-evenly;
-  flex-direction: column;
-  position: absolute;
-  width: 100%;
-  height: 100%;
 }
 
 
