@@ -7,20 +7,20 @@
     messagingSenderId: "380665178914"
   };
 
+  // Function to generate a 'unique' ID
   const uuidv4= () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
   });
 
-  console.log(uuidv4());
-
   const fb = firebase.initializeApp(config);
   var defaultDatabase = firebase.database();
   var ref = defaultDatabase.ref('/pending')
 
-  const date = new Date()
+  // const date = new Date()
   // const num = date.getTime()
-  let uuid
+  let uuid;
+  let intervalReference;
 
   const getElmnt = (id) => document.getElementById(id)
   const makeElmnt = (type) => document.createElement(type)
@@ -29,10 +29,10 @@
   const p2Board = getElmnt('opponent-board');
   const width = getElmnt('width');
   const height = getElmnt('height');
-  const dimensionsBtn = getElmnt('btn-create-game');
+  const startGameBtn = getElmnt('btn-create-game');
+  const joinGameBtn = getElmnt('btn-join-game');
   const startGame = getElmnt('start-game');
   const gameSelect = getElmnt('game-select')
-  // const spinBtn = getElmnt('btn-spin')
   const spinBtns = document.getElementsByClassName('btn-spin')
   const form = document.getElementsByClassName('form')[0]
 
@@ -42,10 +42,10 @@
     const obj = snapshot.val()
     if (obj){
       const keys = Object.keys(obj)
-      keys.forEach( key => {
-        const option = document.createElement('option')
+      keys.reverse().forEach( key => {
+        const option = makeElmnt('option')
         option.value = key
-        option.textContent = obj[key].height + ' x ' + obj[key].width
+        option.textContent = `${obj[key].height} x ${obj[key].width}`
         fragment.appendChild(option)
       })
       gameSelect.innerHTML = ''
@@ -255,8 +255,34 @@
     setBoard(gameBoard, [ 5, 4, 3, 2 ], next)
   }
 
+  const animatedEllipsis = (element, text) => {
+    let counter = 0;
+    let phases = [ '', '.', '..', '...' ]
+    const changeText = () => element.textContent = `${text}${phases[counter++ % 4]}`
+    intervalReference = setInterval(changeText, 1000)
+    changeText()
+  }
+
+  const overlay = (color, text) => {
+    const overlay = makeElmnt('div')
+    const overlayTextContainer = makeElmnt('span')
+    overlay.appendChild(overlayTextContainer)
+    overlay.classList.add('overlay')
+    overlay.style.backgroundColor = color
+    animatedEllipsis(overlayTextContainer, text)
+    return overlay
+  }
+
+  const waitForOpponent = () => {
+    let bgColor = 'rgba(200,0,0,.1)'
+    let text = 'Waiting for opponent'
+    form.style.display = 'none'
+    startGame.appendChild(overlay(bgColor, text))
+  }
+
   const offerGame = () => {
     saveUserToPending(width.value, height.value, 'Player1')
+    waitForOpponent()
   }
 
   const spinPanel = (function(){
@@ -266,7 +292,14 @@
     }
   })()
 
-  dimensionsBtn.onclick = offerGame;
+  const joinGame = () => {
+    console.log(gameSelect.value)
+  }
+
+
+
+  startGameBtn.onclick = offerGame;
+  joinGameBtn.onclick = joinGame;
   [].forEach.call(spinBtns, (btn) => btn.onclick = spinPanel)
 
 })()
