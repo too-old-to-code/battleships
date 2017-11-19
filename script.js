@@ -15,15 +15,21 @@
 
   const fb = firebase.initializeApp(config);
   var defaultDatabase = firebase.database();
-  var ref = defaultDatabase.ref('/pending')
+  var ref = defaultDatabase.ref('/battleships')
 
   // const date = new Date()
   // const num = date.getTime()
   let uuid;
   let intervalReference;
-
+  let PLAYER;
   const getElmnt = (id) => document.getElementById(id)
   const makeElmnt = (type) => document.createElement(type)
+
+  const gameState = {
+    PENDING: 'Waiting for opponent',
+    SETUP: 'Setting up board',
+    PLAYING: 'Game in progress'
+  }
 
   const p1Board = getElmnt('board');
   const p2Board = getElmnt('opponent-board');
@@ -42,10 +48,12 @@
     const obj = snapshot.val()
     if (obj){
       const keys = Object.keys(obj)
-      keys.reverse().forEach( key => {
+      keys.filter( key => obj[key].game.state === gameState.PENDING )
+      .reverse()
+      .forEach( key => {
         const option = makeElmnt('option')
         option.value = key
-        option.textContent = `${obj[key].height} x ${obj[key].width}`
+        option.textContent = `${obj[key].game.height} x ${obj[key].game.width}`
         fragment.appendChild(option)
       })
       gameSelect.innerHTML = ''
@@ -53,23 +61,29 @@
     }
   })
 
-  const saveUserToPending = (width, height, player) => {
-    uuid = uuidv4()
-    defaultDatabase.ref(`/pending/${uuid}`).set({
-      width: width,
-      height: height
-    });
-  }
+  // const saveUserToPending = (width, height, player) => {
+  //   uuid = uuidv4()
+  //   defaultDatabase.ref(`/battleships/${uuid}`).set({
+  //     game: {
+  //       [player]: true,
+  //       width: width,
+  //       height: height
+  //     }
+  //   });
+
+  //   defaultDatabase.ref(`/battleships/${uuid}`).on('child_changed', function(snapshot){
+  //     console.log('hello');
+  //     console.log(snapshot.val());
+  //   })
+  // }
 
   const saveGridToFirebase = (board, shipLocations, player) => {
     console.log('Saving to firebase');
-    defaultDatabase.ref(`/playing/${num}`).set({
-      [player]: {
+    defaultDatabase.ref(`/battleships/${uuid}/game`).update({
+      [PLAYER + 'Board']: {
         model: board.model,
         ships: shipLocations
-      },
-      width: board.width,
-      height: board.height
+      }
     });
   }
 
@@ -139,7 +153,7 @@
       }
     }
 
-    const positionIsVacant = () => !board.model.includes(3)
+    const positionIsVacant = () => !board.model.includes(PRESELECTED)
 
     const placeShip = (event) => {
       if (positionIsVacant() && event.target.dataset.id != null){
@@ -243,12 +257,12 @@
     tryToHit(opponentBoard)
   }
 
-  const beginGame = () => {
+  const beginGame = (w, h) => {
     const GRID_OPTIONS = {
-      width: width.value,
-      height: height.value,
       element: p1Board,
-      gridClasses: [ '', 'selecting', 'selected', 'preselected']
+      gridClasses: [ '', 'selecting', 'selected', 'preselected'],
+      height: h ||  height.value,
+      width: w || width.value
     }
     startGame.style.display = 'none'
     const gameBoard = new Board(GRID_OPTIONS);
@@ -257,8 +271,8 @@
 
   const animatedEllipsis = (element, text) => {
     let counter = 0;
-    let phases = [ '', '.', '..', '...' ]
-    const changeText = () => element.textContent = `${text}${phases[counter++ % 4]}`
+    let ellipsis = '...'
+    const changeText = () => element.textContent = `${text}${ellipsis.slice(0, counter++ % 4)}`
     intervalReference = setInterval(changeText, 1000)
     changeText()
   }
@@ -280,8 +294,28 @@
     startGame.appendChild(overlay(bgColor, text))
   }
 
+  const saveUserToPending = (width, height, player) => {
+    uuid = uuidv4()
+    defaultDatabase.ref(`/battleships/${uuid}`).set({
+      game: {
+        [PLAYER]: true,
+        width: width,
+        height: height,
+        state: gameState.PENDING
+      }
+    });
+
+    defaultDatabase.ref(`/battleships/${uuid}`).on('child_changed', function(snapshot){
+      const gameData = snapshot.val();
+      if (gameData.p1 && gameData.p2 && !(gameData.p1Board || gameData.p2Board)){
+        beginGame()
+      }
+    })
+  }
+
   const offerGame = () => {
-    saveUserToPending(width.value, height.value, 'Player1')
+    PLAYER = 'p1'
+    saveUserToPending(width.value, height.value, 'p1')
     waitForOpponent()
   }
 
@@ -292,10 +326,29 @@
     }
   })()
 
-  const joinGame = () => {
-    console.log(gameSelect.value)
+  const listenToGameInstance = () => {
+    uuid = gameSelect.value
+    defaultDatabase.ref(`/battleships/${gameSelect.value}/game`)
+    .on('value', (snapshot) => {
+      const gameData = snapshot.val();
+      if (gameData.p1Board && gameData.p2Board){
+        console.log('no harm');
+      } else if (gameData.p1 && gameData.p2 && !(gameData.p1Board || gameData.p2Board)){
+        console.log('Beginning');
+        beginGame(gameData.width, gameData.height)
+      }
+    })
   }
 
+  const joinGame = (evt, player = 'p2') => {
+    PLAYER = 'p2'
+    listenToGameInstance()
+    defaultDatabase.ref(`/battleships/${gameSelect.value}/game`)
+    .update({
+      [PLAYER]: true,
+      state: gameState.SETUP
+    })
+  }
 
 
   startGameBtn.onclick = offerGame;
