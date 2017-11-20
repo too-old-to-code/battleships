@@ -1,93 +1,22 @@
+'use strict';
 (function(){
-  var config = {
+
+  // Configuration
+  const FB_CONFIG = {
     apiKey: "AIzaSyBGi1VZkmiFMH8pk4Pam__8TB19EFpBVvo",
     authDomain: "battleships-c7e53.firebaseapp.com",
     databaseURL: "https://battleships-c7e53.firebaseio.com",
     projectId: "battleships-c7e53",
     messagingSenderId: "380665178914"
-  };
-
-  // Function to generate a 'unique' ID
-  const uuidv4= () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-
-  const fb = firebase.initializeApp(config);
-  var defaultDatabase = firebase.database();
-  var ref = defaultDatabase.ref('/battleships')
-
-  // const date = new Date()
-  // const num = date.getTime()
-  let uuid;
-  let intervalReference;
-  let PLAYER;
-  const getElmnt = (id) => document.getElementById(id)
-  const makeElmnt = (type) => document.createElement(type)
-
-  const gameState = {
-    PENDING: 'Waiting for opponent',
-    SETUP: 'Setting up board',
-    PLAYING: 'Game in progress'
   }
 
-  const p1Board = getElmnt('board');
-  const p2Board = getElmnt('opponent-board');
-  const width = getElmnt('width');
-  const height = getElmnt('height');
-  const startGameBtn = getElmnt('btn-create-game');
-  const joinGameBtn = getElmnt('btn-join-game');
-  const startGame = getElmnt('start-game');
-  const gameSelect = getElmnt('game-select')
-  const spinBtns = document.getElementsByClassName('btn-spin')
-  const form = document.getElementsByClassName('form')[0]
+  // firebase initialisation
+  // const fb = firebase.initializeApp(FB_CONFIG);
+  // const defaultDatabase = firebase.database();
+  // const ref = defaultDatabase.ref('/battleships')
 
-
-  ref.on('value', function(snapshot){
-    const fragment = document.createDocumentFragment();
-    const obj = snapshot.val()
-    if (obj){
-      const keys = Object.keys(obj)
-      keys.filter( key => obj[key].game.state === gameState.PENDING )
-      .reverse()
-      .forEach( key => {
-        const option = makeElmnt('option')
-        option.value = key
-        option.textContent = `${obj[key].game.height} x ${obj[key].game.width}`
-        fragment.appendChild(option)
-      })
-      gameSelect.innerHTML = ''
-      gameSelect.appendChild(fragment)
-    }
-  })
-
-  // const saveUserToPending = (width, height, player) => {
-  //   uuid = uuidv4()
-  //   defaultDatabase.ref(`/battleships/${uuid}`).set({
-  //     game: {
-  //       [player]: true,
-  //       width: width,
-  //       height: height
-  //     }
-  //   });
-
-  //   defaultDatabase.ref(`/battleships/${uuid}`).on('child_changed', function(snapshot){
-  //     console.log('hello');
-  //     console.log(snapshot.val());
-  //   })
-  // }
-
-  const saveGridToFirebase = (board, shipLocations, player) => {
-    console.log('Saving to firebase');
-    defaultDatabase.ref(`/battleships/${uuid}/game`).update({
-      [PLAYER + 'Board']: {
-        model: board.model,
-        ships: shipLocations
-      }
-    });
-  }
-
-  const setBoard = (board, ships, cb) => {
+  const setBoard = (board, ships, game) => {
+    console.log('hello');
     const EMPTY = 0;
     const SELECTING = 1;
     const SELECTED = 2;
@@ -162,11 +91,17 @@
         size = ships.shift()
         board.renderView()
         if (!size){
+          let boardName = `${game.player}Board`;
           board.model = board.model.map( status => status === PRESELECTED ? SELECTED : status)
           board.view.onclick = null
           board.renderView()
-          saveGridToFirebase(board, shipLocations, 'PLAYER_1')
-          cb(board.model)
+          game.gameData.game[boardName] = {}
+          game.gameData.game[boardName].model = board.model
+          game.gameData.game[boardName].shipLocations = shipLocations
+          game.pushGameDataToFB()
+          // game.setOpponentsBoard()
+          // saveGridToFirebase(board, shipLocations, 'PLAYER_1')
+          // cb(board.model)
         }
       }
     }
@@ -176,6 +111,57 @@
     board.view.onclick = placeShip
   }
 
+
+
+
+
+  let intervalReference
+
+  // utility functions
+  const getElmnt = (id) => document.getElementById(id)
+  const makeElmnt = (type) => document.createElement(type)
+
+  const spinPanel = (function(){
+    let panelRotation = 0;
+    return (element) => {
+      element.style.transform = `rotateY(${panelRotation += 180}deg)`
+    }
+  })()
+
+  const animatedEllipsis = (element, text) => {
+    let counter = 0;
+    let ellipsis = '...'
+    const changeText = () => element.textContent = `${text}${ellipsis.slice(0, counter++ % 4)}`
+    intervalReference = setInterval(changeText, 1000)
+    changeText()
+  }
+
+  const overlay = (color, text) => {
+    const overlay = makeElmnt('div')
+    const overlayTextContainer = makeElmnt('span')
+    overlay.appendChild(overlayTextContainer)
+    overlay.classList.add('overlay')
+    overlay.style.backgroundColor = color
+    animatedEllipsis(overlayTextContainer, text)
+    return overlay
+  }
+
+
+  // get references to DOM
+  // const p1Board = getElmnt('board');
+  // const p2Board = getElmnt('opponent-board');
+  // const width = getElmnt('width');
+  // const height = getElmnt('height');
+  const startGameBtn = getElmnt('btn-create-game');
+  const joinGameBtn = getElmnt('btn-join-game');
+  const startGame = getElmnt('start-game');
+  const gameSelect = getElmnt('game-select')
+  const spinBtns = document.getElementsByClassName('btn-spin')
+  const form = document.getElementsByClassName('form')[0]
+
+
+
+  // board class
   class Board {
     constructor({ width, height, element, gridClasses}){
       this.gridClasses = gridClasses;
@@ -184,6 +170,7 @@
       this.view = element
       this.view.append(this.createTable(width, height))
       this.model = this.createModel(width * height);
+      console.log(this);
     }
 
     contains(item){
@@ -224,135 +211,253 @@
     }
   }
 
-  const tryToHit = (board) => {
-    const EMPTY = 0;
-    const MISS = 1;
-    const SHIP = 2;
-    const HIT = 3;
-    board.view.onclick = function(event){
+  class FirebaseControl {
+    constructor(appName){
+      this.gameInstance = null;
+      this.appName = appName
+      this.fb = firebase.initializeApp(FB_CONFIG);
+      this.defaultDatabase = firebase.database();
+      this.ref = this.defaultDatabase.ref(`/${appName}`)
+    }
+    openConnection(){
+      this.ref.on('value', snapshot => {
+        const fragment = document.createDocumentFragment();
+        const obj = snapshot.val()
+        if (obj){
+          const keys = Object.keys(obj)
+          keys.filter( key => obj[key].game.state === Game.STATES.PENDING )
+          .reverse()
+          .forEach( key => {
+            const option = makeElmnt('option')
+            option.value = key
+            option.textContent = `${obj[key].game.height} x ${obj[key].game.width}`
+            fragment.appendChild(option)
+          })
+          gameSelect.innerHTML = ''
+          gameSelect.appendChild(fragment)
+        }
+      })
+    }
+    offerGame(gameID, gameData){
+      console.log('Setting');
+      this.defaultDatabase.ref(`/${this.appName}/${gameID}`)
+      .set( gameData )
+    }
+    // listenForGameAcceptance(gameID){
+    //   this.defaultDatabase.ref(`/${this.appName}/${gameID}`)
+    //   .on('child_changed', (snapshot) => {
+    //     const gameData = snapshot.val();
+    //     // if (gameData.p1 && gameData.p2 && !(gameData.p1Board || gameData.p2Board)){
+    //     //   this.gameInstance.setBoard()
+    //     // }
+    //   })
+    // }
+    updateGameData(gameID){
+      this.defaultDatabase.ref(`/${this.appName}/${gameID}/game`)
+      .update(this.gameInstance.gameData.game)
+    }
+    listenToGameAction(gameID){
+      this.defaultDatabase.ref(`/${this.appName}/${gameID}/game`)
+      .on('value', snapshot => {
+        const gameData = snapshot.val();
+        console.log('Data',gameData);
+        const { p1Board, p2Board, playerTurn } = gameData;
+        const { state } = this.gameInstance.gameData.game;
+        if (p1Board && p2Board){
+          if (state !== Game.STATES.PLAYING){
+            console.log('Only see me once');
+            this.gameInstance.setGameState(Game.STATES.PLAYING)
+            this.gameInstance.setPlayerTurn('p1')
+            this.gameInstance.pushGameDataToFB()
+            this.gameInstance.setOpponentsBoard()
+          }
+          this.gameInstance.setBoards(gameData.p1Board, gameData.p2Board)
+          this.gameInstance.setPlayerTurn(playerTurn)
+        } else if (gameData && gameData.p1 && gameData.p2 && !(gameData.p1Board || gameData.p2Board)){
+          const { width, height } = gameData
+          this.gameInstance.setBoardDimensions([ width, height ])
+          this.gameInstance.setBoard()
+          // beginGame(gameData.width, gameData.height)
+        }
+      })
+    }
+    connectToGameInstance(game){
+      this.gameInstance = game
+    }
+  }
+
+  class Game {
+    constructor(player, fb){
+      this.fbRef = fb;
+      this.player = player
+      this.opponent = player === 'p1' ? 'p2' : 'p1'
+      this.fbRef.connectToGameInstance(this)
+      this.currentState = Game.STATES.PENDING
+      this.playerTurn = 'p1'
+      // this.playerName
+      this.opponentName
+
+      this.gameData = {
+        game: {
+          playerTurn: 'p1',
+          state: this.currentState
+        }
+      }
+    }
+
+    setGameID(gameID){
+      this.gameID = gameID
+    }
+    setPlayerTurn(player){
+      this.playerTurn = player
+      this.gameData.game.playerTurn = player
+    }
+
+    setBoardDimensions(dimensions){
+      this.gameData.game.width = dimensions[0]
+      this.gameData.game.height = dimensions[1]
+    }
+
+    setPlayer1(isActive){
+      this.gameData.game.p1 = isActive
+    }
+
+    setPlayer2(isActive){
+      this.gameData.game.p2 = isActive
+    }
+
+    setGameState(state){
+      this.currentState = state
+      this.gameData.game.state = this.currentState
+    }
+
+    displayMessage(text, bgColor){
+      form.style.display = 'none'
+      startGame.appendChild(overlay(bgColor, text))
+    }
+
+    offerGame(){
+      this.fbRef.offerGame(this.gameID, this.gameData)
+    }
+
+    // listenForGameAcceptance(){
+    //   this.fbRef.listenForGameAcceptance(this.gameID)
+    // }
+
+    listenToGameAction(gameID){
+      console.log('Game to listen to:',this.gameID);
+      this.fbRef.listenToGameAction(this.gameID)
+    }
+    setBoards(p1Board, p2Board){
+      this.gameData.game.p1Board = p1Board
+      this.gameData.game.p2Board = p2Board
+      console.log(this);
+    }
+    pushGameDataToFB(){
+      this.fbRef.updateGameData(this.gameID)
+    }
+    setBoard(){
+      const GRID_OPTIONS = {
+        element: getElmnt('board'),
+        gridClasses: [ '', 'selecting', 'selected', 'preselected'],
+        height: this.gameData.game.height,
+        width: this.gameData.game.width
+      }
+      startGame.style.display = 'none'
+      console.log('Build board');
+      this.board = new Board(GRID_OPTIONS)
+      setBoard(this.board, [ 5, 4, 3, 2 ], this)
+    }
+    setOpponentsBoard(){
+      this.displayMessage('Waiting for ships', 'blue')
+      const GRID_OPTIONS = {
+        element: getElmnt('opponent-board'),
+        gridClasses: [ '', 'miss', '', 'hit'],
+        height: this.gameData.game.height,
+        width: this.gameData.game.width
+      }
+      console.log(this.opponent);
+      this.opponentBoard = new Board(GRID_OPTIONS)
+      this.opponentBoard.model = this.gameData.game[`${this.opponent}Board`].model
+      this.opponentBoard.view.style.display = 'table'
+      this.beginFiring(this.opponentBoard)
+      // this.opponentBoard.model =
+    }
+    beginFiring(board){
+      board.view.onclick = this.updateFiringResults.bind(this, board)
+    }
+    updateFiringResults(board, event){
+      const EMPTY = 0;
+      const MISS = 1;
+      const SHIP = 2;
+      const HIT = 3;
       const id = event.target.dataset.id
-      if ( board.model[id] === SHIP ){
-        board.model[id] = HIT
-      }else if (board.model[id] === EMPTY){
-        board.model[id] = MISS
+      console.log(this.gameData.game.playerTurn);
+      console.log(this.player);
+      if (this.gameData.game.playerTurn === this.player){
+        this.setPlayerTurn(this.opponent)
+        if ( board.model[id] === SHIP ){
+          board.model[id] = HIT
+        }else if (board.model[id] === EMPTY){
+          board.model[id] = MISS
+        }
+        board.renderView()
+        if (!board.contains(SHIP)){
+          console.log(board.model);
+          console.log('All over')
+        }
+        this.pushGameDataToFB()
       }
-      board.renderView()
-      if (!board.contains(SHIP)){
-        console.log('All over')
-      }
+    }
+    generateUUID(){
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        let r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
     }
   }
 
-  const next = (otherModel) => {
-    const GRID_OPTIONS = {
-      width: width.value,
-      height: height.value,
-      element: p2Board,
-      gridClasses: [ '', 'miss', '','hit']
-    }
-
-    const opponentBoard = new Board(GRID_OPTIONS)
-    opponentBoard.model = otherModel
-    opponentBoard.view.style.display = "table"
-    tryToHit(opponentBoard)
+  // static variables
+  Game.STATES = {
+    PENDING: 'Waiting for opponent',
+    SETUP: 'Setting up board',
+    PLAYING: 'Game in progress',
+    COMPLETE: 'Game over'
   }
 
-  const beginGame = (w, h) => {
-    const GRID_OPTIONS = {
-      element: p1Board,
-      gridClasses: [ '', 'selecting', 'selected', 'preselected'],
-      height: h ||  height.value,
-      width: w || width.value
-    }
-    startGame.style.display = 'none'
-    const gameBoard = new Board(GRID_OPTIONS);
-    setBoard(gameBoard, [ 5, 4, 3, 2 ], next)
+  const fb = new FirebaseControl('battleships')
+  fb.openConnection()
+
+  // startGameBtn.onclick = offerGame.bind(null, 'p1');
+  startGameBtn.onclick = () => {
+    let player = 'p1'
+    let dimensions = [
+      getElmnt('width').value,
+      getElmnt('height').value
+    ]
+    let game = new Game(player, fb)
+    game.setGameID(game.generateUUID())
+    game.setBoardDimensions(dimensions)
+    game.setPlayer1(true)
+    game.displayMessage('Waiting for opponent', 'rgba(200,0,0,.1)')
+    game.offerGame()
+    // game.listenForGameAcceptance()
+    game.listenToGameAction()
   }
 
-  const animatedEllipsis = (element, text) => {
-    let counter = 0;
-    let ellipsis = '...'
-    const changeText = () => element.textContent = `${text}${ellipsis.slice(0, counter++ % 4)}`
-    intervalReference = setInterval(changeText, 1000)
-    changeText()
+  joinGameBtn.onclick = () => {
+    const gameID = getElmnt('game-select').value;
+    let player = 'p2';
+    let game = new Game(player, fb)
+    game.setPlayer2(true);
+    game.setGameID(gameID)
+    game.setGameState(Game.STATES.SETUP)
+    game.listenToGameAction()
+    game.pushGameDataToFB()
+
   }
 
-  const overlay = (color, text) => {
-    const overlay = makeElmnt('div')
-    const overlayTextContainer = makeElmnt('span')
-    overlay.appendChild(overlayTextContainer)
-    overlay.classList.add('overlay')
-    overlay.style.backgroundColor = color
-    animatedEllipsis(overlayTextContainer, text)
-    return overlay
-  }
-
-  const waitForOpponent = () => {
-    let bgColor = 'rgba(200,0,0,.1)'
-    let text = 'Waiting for opponent'
-    form.style.display = 'none'
-    startGame.appendChild(overlay(bgColor, text))
-  }
-
-  const saveUserToPending = (width, height, player) => {
-    uuid = uuidv4()
-    defaultDatabase.ref(`/battleships/${uuid}`).set({
-      game: {
-        [PLAYER]: true,
-        width: width,
-        height: height,
-        state: gameState.PENDING
-      }
-    });
-
-    defaultDatabase.ref(`/battleships/${uuid}`).on('child_changed', function(snapshot){
-      const gameData = snapshot.val();
-      if (gameData.p1 && gameData.p2 && !(gameData.p1Board || gameData.p2Board)){
-        beginGame()
-      }
-    })
-  }
-
-  const offerGame = () => {
-    PLAYER = 'p1'
-    saveUserToPending(width.value, height.value, 'p1')
-    waitForOpponent()
-  }
-
-  const spinPanel = (function(){
-    let panelRotation = 0;
-    return () => {
-      form.style.transform = `rotateY(${panelRotation += 180}deg)`
-    }
-  })()
-
-  const listenToGameInstance = () => {
-    uuid = gameSelect.value
-    defaultDatabase.ref(`/battleships/${gameSelect.value}/game`)
-    .on('value', (snapshot) => {
-      const gameData = snapshot.val();
-      if (gameData.p1Board && gameData.p2Board){
-        console.log('no harm');
-      } else if (gameData.p1 && gameData.p2 && !(gameData.p1Board || gameData.p2Board)){
-        console.log('Beginning');
-        beginGame(gameData.width, gameData.height)
-      }
-    })
-  }
-
-  const joinGame = (evt, player = 'p2') => {
-    PLAYER = 'p2'
-    listenToGameInstance()
-    defaultDatabase.ref(`/battleships/${gameSelect.value}/game`)
-    .update({
-      [PLAYER]: true,
-      state: gameState.SETUP
-    })
-  }
-
-
-  startGameBtn.onclick = offerGame;
-  joinGameBtn.onclick = joinGame;
-  [].forEach.call(spinBtns, (btn) => btn.onclick = spinPanel)
+  // add event listener to 'btn-spin' buttons on each side of panel
+  [].forEach.call(spinBtns, (btn) => btn.onclick = spinPanel.bind(null, form))
 
 })()
