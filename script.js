@@ -10,13 +10,7 @@
     messagingSenderId: "380665178914"
   }
 
-  // firebase initialisation
-  // const fb = firebase.initializeApp(FB_CONFIG);
-  // const defaultDatabase = firebase.database();
-  // const ref = defaultDatabase.ref('/battleships')
-
   const setBoard = (board, ships, game) => {
-    console.log('hello');
     const EMPTY = 0;
     const SELECTING = 1;
     const SELECTED = 2;
@@ -101,9 +95,6 @@
           game.gameData.game[boardName].model = board.model
           game.gameData.game[boardName].shipLocations = shipLocations
           game.pushGameDataToFB()
-          // game.setOpponentsBoard()
-          // saveGridToFirebase(board, shipLocations, 'PLAYER_1')
-          // cb(board.model)
         }
       }
     }
@@ -172,7 +163,6 @@
       this.view = element
       this.view.append(this.createTable(width, height))
       this.model = this.createModel(width * height);
-      console.log(this);
     }
 
     setGridClasses(){
@@ -257,12 +247,11 @@
       this.defaultDatabase.ref(`/${this.appName}/${gameID}/game`)
       .on('value', snapshot => {
         const gameData = snapshot.val();
-        // console.log('Data',gameData);
         const { p1Board, p2Board, playerTurn } = gameData;
         const { state } = this.gameInstance.gameData.game;
         if (p1Board && p2Board){
           if (state !== Game.STATES.PLAYING){
-            console.log('Only see me once');
+            // this should only run once per instance per game
             this.gameInstance.setGameState(Game.STATES.PLAYING)
             this.gameInstance.setPlayerTurn('p1')
             this.gameInstance.pushGameDataToFB()
@@ -270,10 +259,14 @@
           }
           this.gameInstance.setBoards(gameData.p1Board, gameData.p2Board)
           this.gameInstance.setPlayerTurn(playerTurn)
-          if (this.gameInstance.playerTurn === this.gameInstance.player){
-            this.gameInstance.opponentBoard.view.classList.add('turn');
-          } else {
-            this.gameInstance.opponentBoard.view.classList.remove('turn');
+          try {
+            if (this.gameInstance.playerTurn === this.gameInstance.player){
+              this.gameInstance.opponentBoard.view.classList.add('turn');
+            } else {
+              this.gameInstance.opponentBoard.view.classList.remove('turn');
+            }
+          } catch (e){
+            console.log(e);
           }
         } else if (gameData && gameData.p1 && gameData.p2 && !(gameData.p1Board || gameData.p2Board)){
           const { width, height } = gameData
@@ -295,7 +288,6 @@
       this.fbRef.connectToGameInstance(this)
       this.currentState = Game.STATES.PENDING
       this.playerTurn = 'p1'
-      // this.playerName
       this.opponentName
 
       this.gameData = {
@@ -341,12 +333,7 @@
       this.fbRef.offerGame(this.gameID, this.gameData)
     }
 
-    // listenForGameAcceptance(){
-    //   this.fbRef.listenForGameAcceptance(this.gameID)
-    // }
-
     listenToGameAction(gameID){
-      console.log('Game to listen to:',this.gameID);
       this.fbRef.listenToGameAction(this.gameID)
     }
     setBoards(p1Board, p2Board){
@@ -366,9 +353,8 @@
         width: this.gameData.game.width
       }
       startGame.style.display = 'none'
-      console.log('Build board');
       this.board = new Board(GRID_OPTIONS)
-      setBoard(this.board, [ 5, 4, 3, 2 ], this)
+      setBoard(this.board, [ 2 ], this)
     }
     setOpponentsBoard(){
       this.displayMessage('Waiting for ships', 'blue')
@@ -383,11 +369,8 @@
       this.opponentBoard = new Board(GRID_OPTIONS)
       this.opponentBoard.model = this.gameData.game[`${this.opponent}Board`].model
       this.opponentBoard.view.style.display = 'table'
-      // if (this.playerTurn === this.player){
-      //   this.opponentBoard.view.classList.add('turn')
-      // }
       this.beginFiring(this.opponentBoard)
-      // this.opponentBoard.model =
+
     }
     beginFiring(board){
       this.board.setGridClasses()
@@ -401,21 +384,17 @@
       const id = event.target.dataset.id
       const { game} = this.gameData
 
-      if (game.playerTurn === this.player && ![MISS, HIT].includes(game[this.opponent + 'Board'].model[id])){
+      if (game.playerTurn === this.player && ![MISS, HIT, null, undefined].includes(game[this.opponent + 'Board'].model[id])){
         this.setPlayerTurn(this.opponent)
-        // this.opponentBoard.view.classList.remove('turn');
-        console.log(this.opponentBoard.view)
         if ( board.model[id] === SHIP ){
           board.model[id] = HIT
           this.gameData.game[this.opponent + 'Board'].model[id] = HIT
         }else if (board.model[id] === EMPTY){
-          console.log('LoveIT',this.gameData.game[this.opponent + 'Board'].model[id]);
           board.model[id] = MISS
           this.gameData.game[this.opponent + 'Board'].model[id] = MISS
         }
         board.renderView()
         if (!board.contains(SHIP)){
-          console.log(board.model);
           console.log('All over')
         }
         this.pushGameDataToFB()
@@ -440,7 +419,6 @@
   const fb = new FirebaseControl('battleships')
   fb.openConnection()
 
-  // startGameBtn.onclick = offerGame.bind(null, 'p1');
   startGameBtn.onclick = () => {
     let player = 'p1'
     let dimensions = [
@@ -453,7 +431,6 @@
     game.setPlayer1(true)
     game.displayMessage('Waiting for opponent', 'rgba(200,0,0,.1)')
     game.offerGame()
-    // game.listenForGameAcceptance()
     game.listenToGameAction()
   }
 
