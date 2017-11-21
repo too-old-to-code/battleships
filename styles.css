@@ -5,7 +5,17 @@
   --positiive-text-color: grey;
   --negative-text-color: white;
   --radius-gentle: 5px;
+  --indicator-color: #ffffdf;
 }
+@keyframes turn-indicator {
+  from {
+    box-shadow: 0 0 20px 2px var(--indicator-color);
+  }
+  to {
+    box-shadow: 0 0 40px 2px var(--indicator-color);
+  }
+}
+
 
 html, body {
   margin: 0;
@@ -24,13 +34,20 @@ table {
 }
 
 td {
-  border: 2px solid var(--secondary-color);
+  border: 2px solid #36464b;
   border-radius: 6px;
   background-color: var(--primary-color);
 }
 
 #opponent-board {
   display: none;
+}
+
+#opponent-board.turn {
+  animation-name: turn-indicator;
+  animation-duration: 1s;
+  animation-direction: alternate;
+  animation-iteration-count: infinite;
 }
 
 #opponent-board:hover {
@@ -54,6 +71,7 @@ td {
   display:flex;
   justify-content: space-evenly;
   align-items: center;
+  background-color: #36464b;
 }
 
 .selecting {

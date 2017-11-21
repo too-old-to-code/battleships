@@ -94,6 +94,8 @@
           let boardName = `${game.player}Board`;
           board.model = board.model.map( status => status === PRESELECTED ? SELECTED : status)
           board.view.onclick = null
+          board.view.onmouseover = null
+          board.view.onmouseout = null
           board.renderView()
           game.gameData.game[boardName] = {}
           game.gameData.game[boardName].model = board.model
@@ -173,6 +175,10 @@
       console.log(this);
     }
 
+    setGridClasses(){
+      this.gridClasses = [ '', 'miss', 'selected', 'hit']
+    }
+
     contains(item){
       return this.model.includes(item)
     }
@@ -239,19 +245,10 @@
       })
     }
     offerGame(gameID, gameData){
-      console.log('Setting');
       this.defaultDatabase.ref(`/${this.appName}/${gameID}`)
       .set( gameData )
     }
-    // listenForGameAcceptance(gameID){
-    //   this.defaultDatabase.ref(`/${this.appName}/${gameID}`)
-    //   .on('child_changed', (snapshot) => {
-    //     const gameData = snapshot.val();
-    //     // if (gameData.p1 && gameData.p2 && !(gameData.p1Board || gameData.p2Board)){
-    //     //   this.gameInstance.setBoard()
-    //     // }
-    //   })
-    // }
+
     updateGameData(gameID){
       this.defaultDatabase.ref(`/${this.appName}/${gameID}/game`)
       .update(this.gameInstance.gameData.game)
@@ -260,7 +257,7 @@
       this.defaultDatabase.ref(`/${this.appName}/${gameID}/game`)
       .on('value', snapshot => {
         const gameData = snapshot.val();
-        console.log('Data',gameData);
+        // console.log('Data',gameData);
         const { p1Board, p2Board, playerTurn } = gameData;
         const { state } = this.gameInstance.gameData.game;
         if (p1Board && p2Board){
@@ -273,11 +270,15 @@
           }
           this.gameInstance.setBoards(gameData.p1Board, gameData.p2Board)
           this.gameInstance.setPlayerTurn(playerTurn)
+          if (this.gameInstance.playerTurn === this.gameInstance.player){
+            this.gameInstance.opponentBoard.view.classList.add('turn');
+          } else {
+            this.gameInstance.opponentBoard.view.classList.remove('turn');
+          }
         } else if (gameData && gameData.p1 && gameData.p2 && !(gameData.p1Board || gameData.p2Board)){
           const { width, height } = gameData
           this.gameInstance.setBoardDimensions([ width, height ])
           this.gameInstance.setBoard()
-          // beginGame(gameData.width, gameData.height)
         }
       })
     }
@@ -351,7 +352,8 @@
     setBoards(p1Board, p2Board){
       this.gameData.game.p1Board = p1Board
       this.gameData.game.p2Board = p2Board
-      console.log(this);
+      this.board.model = this.gameData.game[this.player +'Board'].model
+      this.board.renderView()
     }
     pushGameDataToFB(){
       this.fbRef.updateGameData(this.gameID)
@@ -377,13 +379,18 @@
         width: this.gameData.game.width
       }
       console.log(this.opponent);
+
       this.opponentBoard = new Board(GRID_OPTIONS)
       this.opponentBoard.model = this.gameData.game[`${this.opponent}Board`].model
       this.opponentBoard.view.style.display = 'table'
+      // if (this.playerTurn === this.player){
+      //   this.opponentBoard.view.classList.add('turn')
+      // }
       this.beginFiring(this.opponentBoard)
       // this.opponentBoard.model =
     }
     beginFiring(board){
+      this.board.setGridClasses()
       board.view.onclick = this.updateFiringResults.bind(this, board)
     }
     updateFiringResults(board, event){
@@ -392,14 +399,19 @@
       const SHIP = 2;
       const HIT = 3;
       const id = event.target.dataset.id
-      console.log(this.gameData.game.playerTurn);
-      console.log(this.player);
-      if (this.gameData.game.playerTurn === this.player){
+      const { game} = this.gameData
+
+      if (game.playerTurn === this.player && ![MISS, HIT].includes(game[this.opponent + 'Board'].model[id])){
         this.setPlayerTurn(this.opponent)
+        // this.opponentBoard.view.classList.remove('turn');
+        console.log(this.opponentBoard.view)
         if ( board.model[id] === SHIP ){
           board.model[id] = HIT
+          this.gameData.game[this.opponent + 'Board'].model[id] = HIT
         }else if (board.model[id] === EMPTY){
+          console.log('LoveIT',this.gameData.game[this.opponent + 'Board'].model[id]);
           board.model[id] = MISS
+          this.gameData.game[this.opponent + 'Board'].model[id] = MISS
         }
         board.renderView()
         if (!board.contains(SHIP)){
