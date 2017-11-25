@@ -20,6 +20,10 @@
       return tbody
     }
 
+    setGridClasses(){
+      this.gridClasses = [ '', 'miss', 'selected', 'hit']
+    }
+
     createRow(columns, colIndex){
       const tr = makeElmnt('tr')
       for (let i = 0; i < columns; i ++){
