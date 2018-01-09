@@ -107,7 +107,7 @@
       }
       startGame.style.display = 'none'
       this.board = new Board(GRID_OPTIONS)
-      setBoard(this.board, [ 2 ], this)
+      setBoard(this.board, [ 5, 4, 3, 2 ], this)
     }
     setOpponentsBoard(){
       anchor.innerHTML = ''
