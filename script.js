@@ -226,6 +226,7 @@
       this.ref.on('value', snapshot => {
         const fragment = document.createDocumentFragment();
         const obj = snapshot.val()
+        console.log('1');
         if (obj){
           const keys = Object.keys(obj)
           keys.filter( key => obj[key].game.state === Game.STATES.PENDING )
@@ -269,9 +270,9 @@
           this.gameInstance.setPlayerTurn(playerTurn)
           try {
             if (this.gameInstance.playerTurn === this.gameInstance.player){
-              this.gameInstance.opponentBoard.view.classList.add('turn');
+              this.gameInstance.opponentBoard && this.gameInstance.opponentBoard.view.classList.add('turn');
             } else {
-              this.gameInstance.opponentBoard.view.classList.remove('turn');
+              this.gameInstance.opponentBoard && this.gameInstance.opponentBoard.view.classList.remove('turn');
             }
           } catch (e){
             console.log(e);
