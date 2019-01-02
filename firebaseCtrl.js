@@ -1,5 +1,5 @@
 const FB_CONFIG = {
-  apiKey: "AIzaSyBGi1VZkmiFMH8pk4Pam__8TB19EFpBVvo",
+  apiKey: "AIzaSyCIOqvyDqoFIX-ak3gGntZSlCeQ0iK_LVI",
   authDomain: "battleships-c7e53.firebaseapp.com",
   databaseURL: "https://battleships-c7e53.firebaseio.com",
   projectId: "battleships-c7e53",
