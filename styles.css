@@ -198,15 +198,15 @@ td:after {
 }
 
 .form input {
-  -webkit-box-flex: 1;
+ /* -webkit-box-flex: 1;
       -ms-flex: 1;
-          flex: 1;
+          flex: 1;*/
   height: 30px;
   border: none;
   border-top-right-radius: var(--radius-gentle);
   border-bottom-right-radius: var(--radius-gentle);
   border-left: 1px solid grey;
-  width: 20px;
+  width: 80px;
   font-size: 1.3em;
   text-align: center;
   color: transparent;
