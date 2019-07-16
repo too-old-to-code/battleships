@@ -66,7 +66,7 @@ class FirebaseControl {
               this.gameInstance.opponentBoard.view.classList.remove('turn');
             }
           } catch (e){
-            console.log(e);
+            // do nothing
           }
         } else if (gameData && gameData.p1 && gameData.p2 && !(gameData.p1Board || gameData.p2Board)){
           const { width, height } = gameData

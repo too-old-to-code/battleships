@@ -350,6 +350,19 @@ button.btn-spin:focus {
   left:100%;
 }
 
+.place-instruction {
+  color: white;
+  position: fixed;
+  bottom: 0;
+  display: none;
+  width: 100%;
+  text-align: center;
+}
+
+.place-instruction.show {
+  display: inline-block;
+}
+
 
 
 

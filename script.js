@@ -97,6 +97,7 @@
       this.fbRef.updateGameData(this.gameID)
     }
     setBoard(){
+      instruction.classList.toggle('show')
       anchor.innerHTML = ''
       const { height, width } = this.gameData.game;
       const GRID_OPTIONS = {
@@ -125,6 +126,7 @@
 
     }
     beginFiring(board){
+      instruction.classList.toggle('show')
       this.board.setGridClasses()
       board.view.onclick = this.updateFiringResults.bind(this, board)
     }
