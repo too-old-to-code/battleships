@@ -5,3 +5,4 @@
   const gameSelect = getElmnt('game-select')
   const spinBtns = document.getElementsByClassName('btn-spin')
   const form = document.getElementsByClassName('form')[0]
+  const instruction = document.getElementsByClassName('place-instruction')[0]
